@@ -1,4 +1,5 @@
 import type { ColumnType } from "../file-interface/types";
+import { ThrowHelper, type DiagnosticRange } from "../diagnostics";
 
 export type DataCellValueType =
   | { type: "string"; value: string }
@@ -7,7 +8,7 @@ export type DataCellValueType =
   | { type: "null"; value: null };
 
 // Values stay close to the source file and are not inflated into heavier classes.
-export function inferDynamicDataCellValue(rawValue: string): DataCellValueType {
+export function inferDynamicDataCellValue(rawValue: string, range?: DiagnosticRange): DataCellValueType {
   const parsers = [parseNullValue, parseNumberValue, parseBooleanValue, parseStringValue];
 
   for (const parser of parsers) {
@@ -17,12 +18,16 @@ export function inferDynamicDataCellValue(rawValue: string): DataCellValueType {
     }
   }
 
-  throw new Error(`Unable to parse dynamic cell value: ${rawValue}`);
+  ThrowHelper.parser("dynamic_parse_failed", { rawValue }, range ? { range } : {});
 }
 
-export function parseDeclaredDataCellValue(rawValue: string, declaredType: ColumnType): DataCellValueType {
+export function parseDeclaredDataCellValue(
+  rawValue: string,
+  declaredType: ColumnType,
+  range?: DiagnosticRange,
+): DataCellValueType {
   if (declaredType === "dynamic") {
-    return inferDynamicDataCellValue(rawValue);
+    return inferDynamicDataCellValue(rawValue, range);
   }
 
   const parserMap: Record<Exclude<ColumnType, "dynamic">, (value: string) => DataCellValueType | null> = {
@@ -34,7 +39,7 @@ export function parseDeclaredDataCellValue(rawValue: string, declaredType: Colum
 
   const parsedValue = parserMap[declaredType](rawValue);
   if (!parsedValue) {
-    throw new Error(`Value "${rawValue}" does not match declared column type "${declaredType}"`);
+    ThrowHelper.parser("declared_type_mismatch", { rawValue, declaredType }, range ? { range } : {});
   }
 
   return parsedValue;

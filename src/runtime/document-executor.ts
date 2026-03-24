@@ -1,4 +1,5 @@
 import type { AnalyzedPlotBlock, AnalyzedSheetDocument } from "../analysis/types";
+import { ThrowHelper } from "../diagnostics";
 import type { DataCellValueType } from "../shared/value";
 import { ComputeExecutor } from "./compute-executor";
 import type { EvaluatedPlot, EvaluatedSheetDocument, EvaluatedTable, RuntimeRow } from "./types";
@@ -22,7 +23,7 @@ export class DocumentExecutor {
       if (block.kind === "compute") {
         const currentTable = tables[block.tableName];
         if (!currentTable) {
-          throw new Error(`Cannot execute @compute ${block.tableName} before its table is materialized`);
+          ThrowHelper.runtime("compute_before_table", { table: block.tableName });
         }
 
         const nextTable = this.computeExecutor.execute(this.toTableBlock(currentTable), block);
@@ -59,7 +60,7 @@ export class DocumentExecutor {
   ): EvaluatedPlot {
     const table = tables[block.tableName];
     if (!table) {
-      throw new Error(`Cannot execute @plot ${block.tableName} before its table is materialized`);
+      ThrowHelper.runtime("plot_before_table", { table: block.tableName });
     }
 
     const missingDependencies = block.resolvedDependencies.filter(
@@ -67,7 +68,7 @@ export class DocumentExecutor {
     );
     if (missingDependencies.length > 0) {
       const missingNames = missingDependencies.map((dependency) => dependency.name).join(", ");
-      throw new Error(`@plot ${block.tableName} depends on columns that are not materialized yet: ${missingNames}`);
+      ThrowHelper.runtime("plot_dependency_not_materialized", { table: block.tableName, names: missingNames });
     }
 
     return {
@@ -104,7 +105,7 @@ export class DocumentExecutor {
     for (const dependency of dependencies) {
       const value = row[dependency.name];
       if (value === undefined) {
-        throw new Error(`Missing runtime value for plot dependency "${dependency.name}"`);
+        ThrowHelper.runtime("runtime_missing_plot_dependency", { name: dependency.name });
       }
       projectedRow[dependency.name] = value;
     }
@@ -121,7 +122,7 @@ export class DocumentExecutor {
         table.columns.map((column) => {
           const value = row[column.name];
           if (value === undefined) {
-            throw new Error(`Missing runtime value for column "${column.name}" in table "${table.name}"`);
+            ThrowHelper.runtime("runtime_missing_table_value", { column: column.name, table: table.name });
           }
           return value;
         }),

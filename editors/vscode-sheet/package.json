@@ -1,0 +1,39 @@
+{
+  "name": "sheet-language-support",
+  "displayName": ".sheet Language Support",
+  "description": "Syntax highlighting and editor configuration for .sheet files",
+  "version": "0.1.0",
+  "publisher": "local",
+  "main": "./extension.js",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:sheet"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sheet",
+        "aliases": [
+          "sheet",
+          ".sheet"
+        ],
+        "extensions": [
+          ".sheet"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sheet",
+        "scopeName": "source.sheet",
+        "path": "./syntaxes/sheet.tmLanguage.json"
+      }
+    ]
+  }
+}

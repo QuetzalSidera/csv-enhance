@@ -1,9 +1,11 @@
 import type { ParsedSheetBlock, ParsedSheetDocument, TableBlock } from "./types";
+import { ThrowHelper } from "../diagnostics";
 import type { BlockBuffer, ParserTableRegistry } from "./parser/block-buffer";
-import { DEFAULT_TABLE_NAME, DIRECTIVE_PATTERN } from "./parser/parser-config";
+import { DEFAULT_TABLE_NAME, DIRECTIVE_PATTERN, FUNC_DIRECTIVE_PATTERN } from "./parser/parser-config";
 import { ParserSupport } from "./parser/parser-support";
 import {
   ComputeBlockParser,
+  FuncBlockParser,
   MetaBlockParser,
   PlotBlockParser,
   PluginBlockParser,
@@ -18,6 +20,8 @@ export class SheetSyntaxParser {
   private readonly pluginBlockParser = new PluginBlockParser(this.support);
 
   private readonly tableBlockParser = new TableBlockParser(this.support);
+
+  private readonly funcBlockParser = new FuncBlockParser(this.support);
 
   private readonly computeBlockParser = new ComputeBlockParser(this.support);
 
@@ -41,6 +45,33 @@ export class SheetSyntaxParser {
       }
 
       const headerLine = lines[index].trim();
+      const funcDirectiveMatch = headerLine.match(FUNC_DIRECTIVE_PATTERN);
+      if (funcDirectiveMatch) {
+        const startLine = index + 1;
+        index += 1;
+
+        const body: string[] = [];
+        while (index < lines.length && !lines[index].replace(/^\s+/, "").startsWith("@")) {
+          body.push(lines[index]);
+          index += 1;
+        }
+
+        blocks.push(
+          this.funcBlockParser.parse({
+            directive: "func",
+            name: funcDirectiveMatch[1],
+            headerLine,
+            body,
+            source: {
+              startLine,
+              endLine: Math.max(startLine, index),
+            },
+            bodyStartLine: startLine + 1,
+          }),
+        );
+        continue;
+      }
+
       const directiveMatch = headerLine.match(DIRECTIVE_PATTERN);
       if (!directiveMatch && blocks.length === 0) {
         const block = this.parseImplicitFirstTable(lines, index);
@@ -51,7 +82,14 @@ export class SheetSyntaxParser {
       }
 
       if (!directiveMatch) {
-        throw new Error(`Expected directive at line ${index + 1}: ${lines[index]}`);
+        ThrowHelper.parser(
+          "expected_directive",
+          { lineText: lines[index] },
+          {
+            range: ThrowHelper.pointRange(index + 1, 1),
+            suggestion: 'Start the block with a supported directive such as "@table" or "@compute".',
+          },
+        );
       }
 
       const startLine = index + 1;
@@ -68,11 +106,13 @@ export class SheetSyntaxParser {
       const blockBuffer: BlockBuffer = {
         directive,
         name,
+        headerLine,
         body,
         source: {
           startLine,
           endLine: Math.max(startLine, index),
         },
+        bodyStartLine: startLine + 1,
       };
 
       const block = this.parseBlock(blockBuffer, tableMap);
@@ -104,11 +144,13 @@ export class SheetSyntaxParser {
     const table = this.tableBlockParser.parse({
       directive: "table",
       name: DEFAULT_TABLE_NAME,
+      headerLine: `@table ${DEFAULT_TABLE_NAME}`,
       body,
       source: {
         startLine: startIndex + 1,
         endLine: Math.max(startIndex + 1, index),
       },
+      bodyStartLine: startIndex + 1,
     });
 
     return {
@@ -120,13 +162,17 @@ export class SheetSyntaxParser {
   private parseBlock(blockBuffer: BlockBuffer, tableMap: ParserTableRegistry): ParsedSheetBlock {
     if (blockBuffer.directive === "meta") {
       if (blockBuffer.name) {
-        throw new Error("@meta does not accept a block name");
+        ThrowHelper.parser("meta_name_not_allowed", {}, { range: ThrowHelper.pointRange(blockBuffer.source.startLine, 1) });
       }
       return this.metaBlockParser.parse(blockBuffer);
     }
 
     if (!blockBuffer.name) {
-      throw new Error(`@${blockBuffer.directive} requires a block name`);
+      ThrowHelper.parser(
+        "block_name_required",
+        { directive: blockBuffer.directive },
+        { range: ThrowHelper.pointRange(blockBuffer.source.startLine, 1) },
+      );
     }
 
     switch (blockBuffer.directive) {
@@ -134,12 +180,18 @@ export class SheetSyntaxParser {
         return this.pluginBlockParser.parse(blockBuffer);
       case "table":
         return this.tableBlockParser.parse(blockBuffer);
+      case "func":
+        return this.funcBlockParser.parse(blockBuffer);
       case "compute":
         return this.computeBlockParser.parse(blockBuffer);
       case "plot":
         return this.plotBlockParser.parse(blockBuffer, tableMap);
       default:
-        throw new Error(`Unsupported directive @${blockBuffer.directive}`);
+        ThrowHelper.parser(
+          "unsupported_directive",
+          { directive: blockBuffer.directive },
+          { range: ThrowHelper.pointRange(blockBuffer.source.startLine, 1) },
+        );
     }
   }
 }

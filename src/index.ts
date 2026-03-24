@@ -1,8 +1,11 @@
 export { DefaultSheetFileReader, type SheetFileReader } from "./file-interface/reader";
+export { ThrowHelper } from "./diagnostics";
+export { WarningCollector, WarningHelper } from "./diagnostics";
+export { SheetLinter } from "./lint";
 export { PluginModuleLoader } from "./file-interface/plugin-loader";
 export { SheetSyntaxParser } from "./file-interface/parser";
 export { SheetSemanticAnalyzer } from "./analysis/analyzer";
-export { ExpressionParser, type ParsedExpressionNode } from "./analysis/expression-parser";
+export { ExpressionParser, type BuiltinFunctionName, type ParsedExpressionNode } from "./expression";
 export { ComputeExecutor } from "./runtime/compute-executor";
 export { DocumentExecutor } from "./runtime/document-executor";
 export { ExpressionEvaluator } from "./runtime/expression-evaluator";
@@ -13,6 +16,8 @@ export type {
   ColumnType,
   ComputeBlock,
   ComputeStatement,
+  FuncBlock,
+  FunctionParameter,
   MetaBlock,
   MetaEntry,
   ParsedPluginBinding,
@@ -40,11 +45,13 @@ export type {
   AnalyzedSheetDocument,
   AnalyzedSheetBlock,
   AnalyzeTarget,
+  AnalyzedFuncBlock,
   BinaryExpressionNode,
   BinaryOperator,
   BuiltinCallNode,
   ColumnReferenceNode,
   ExpressionNode,
+  FuncCallNode,
   LocalReferenceNode,
   NumberLiteralNode,
   PluginCallNode,
@@ -61,6 +68,26 @@ export type {
 } from "./runtime/types";
 export type { VegaLiteBarSpec, VegaLiteEncodingField, VegaLiteFieldType } from "./runtime/plot-compiler";
 export type { CompiledSheetResult, CompiledSheetResult as SheetCompilationResult } from "./runtime/sheet-compiler";
+export {
+  ANALYSIS_DIAGNOSTIC_SPECS,
+  formatAnalysisErrorMessage,
+  formatParserErrorMessage,
+  formatRuntimeErrorMessage,
+  formatWarningMessage,
+  PARSER_DIAGNOSTIC_SPECS,
+  RUNTIME_DIAGNOSTIC_SPECS,
+  SheetDiagnosticError,
+  WARNING_DIAGNOSTIC_SPECS,
+} from "./diagnostics";
+export type { DiagnosticLocale, DiagnosticOptions, DiagnosticPhase, DiagnosticRange, DiagnosticSeverity, SheetWarning } from "./diagnostics";
+export type { LintIssue, LintPhase, LintResult, LintRule, LintRuleContext, LintSeverity } from "./lint";
+export type {
+  AnalysisDiagnosticKey,
+  DiagnosticKeySpec,
+  ParserDiagnosticKey,
+  RuntimeDiagnosticKey,
+  WarningDiagnosticKey,
+} from "./diagnostics";
 export {
   inferColumnTypeFromCells,
   inferDynamicDataCellValue,

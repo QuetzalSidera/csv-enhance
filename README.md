@@ -8,6 +8,7 @@ Current scope:
 - block-level syntax parsing
 - expression AST parsing
 - semantic analysis for `@compute`
+- local `@func` pure-expression reuse
 - compute execution runtime
 - document execution runtime
 - Vega-Lite bar plot compilation
@@ -59,6 +60,35 @@ node examples/compile-retail.js
 node examples/compile-chinese-sales.js
 ```
 
+To lint a `.sheet` file from the command line:
+
+```bash
+npm run build
+node dist/cli/sheet.js lint ./examples/retail.sheet
+```
+
+After installing the package as a binary, the same command is available as:
+
+```bash
+sheet lint ./examples/retail.sheet
+```
+
+## Editor Support
+
+A first VS Code syntax-highlighting extension is available in:
+
+- [editors/vscode-sheet/package.json](/Users/qianshuang/Project/WebProject/csv-enhance/editors/vscode-sheet/package.json)
+- [editors/vscode-sheet/syntaxes/sheet.tmLanguage.json](/Users/qianshuang/Project/WebProject/csv-enhance/editors/vscode-sheet/syntaxes/sheet.tmLanguage.json)
+- [editors/vscode-sheet/language-configuration.json](/Users/qianshuang/Project/WebProject/csv-enhance/editors/vscode-sheet/language-configuration.json)
+
+This first iteration provides:
+
+- `.sheet` file association
+- `#` comment support
+- syntax highlighting for directives, block keys, `name[type]`, `@func` signatures, and expressions
+
+The next editor step is wiring the existing lint and diagnostics engine into inline warnings and errors.
+
 These scripts compile:
 
 - [examples/retail.sheet](/Users/qianshuang/Project/WebProject/csv-enhance/examples/retail.sheet) -> `examples/retail.xlsx`
@@ -68,6 +98,17 @@ Each table becomes one worksheet, and plots are stored in a `_plots` worksheet a
 
 The bundled [examples/retail.sheet](/Users/qianshuang/Project/WebProject/csv-enhance/examples/retail.sheet) is a valid end-to-end input for the current DSL.
 The bundled [examples/chinese-sales.sheet](/Users/qianshuang/Project/WebProject/csv-enhance/examples/chinese-sales.sheet) demonstrates Unicode table names, column names, compute targets, and plot dependencies.
+
+`@func` defines a reusable pure expression in the same `.sheet` file:
+
+```text
+@func 税额(单价[number], 数量[number]) -> number
+单价 * 数量 * 1.08
+```
+
+It can then be called from `@compute` just like a normal function call.
+`@compute` is row-scoped only, so built-in cross-row aggregators such as `avg` or `max` are intentionally not supported.
+Current builtin expression functions are `if`, `coalesce`, `and`, and `or`.
 
 Comment lines starting with `#` are ignored during parsing.
 If the first block does not start with `@`, it is parsed as an implicit `@table sheet` block for CSV compatibility.

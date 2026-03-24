@@ -1,4 +1,5 @@
 import type { EvaluatedPlot } from "./types";
+import { ThrowHelper } from "../diagnostics";
 
 export type VegaLiteFieldType = "quantitative" | "nominal";
 
@@ -27,7 +28,7 @@ export class PlotCompiler {
     const yField = plot.fields.y;
 
     if (!xField || !yField) {
-      throw new Error(`Bar plot for table "${plot.tableName}" must define x and y`);
+      ThrowHelper.runtime("plot_axes_required", { table: plot.tableName });
     }
 
     return {
@@ -48,7 +49,7 @@ export class PlotCompiler {
   private buildEncodingField(plot: EvaluatedPlot, fieldName: string): VegaLiteEncodingField {
     const dependency = plot.resolvedDependencies.find((candidate) => candidate.name === fieldName);
     if (!dependency) {
-      throw new Error(`Unknown plot field "${fieldName}" for table "${plot.tableName}"`);
+      ThrowHelper.runtime("plot_field_unknown", { field: fieldName, table: plot.tableName });
     }
 
     return {

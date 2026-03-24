@@ -1,4 +1,5 @@
 import type { AnalyzedComputeBlock } from "../analysis/types";
+import { ThrowHelper } from "../diagnostics";
 import type { TableBlock, TableColumn } from "../file-interface/types";
 import type { DataCellValueType } from "../shared/value";
 import { ExpressionEvaluator } from "./expression-evaluator";
@@ -9,9 +10,7 @@ export class ComputeExecutor {
 
   execute(table: TableBlock, computeBlock: AnalyzedComputeBlock): EvaluatedTable {
     if (table.name !== computeBlock.tableName) {
-      throw new Error(
-        `Compute block targets table "${computeBlock.tableName}" but executor received "${table.name}"`,
-      );
+      ThrowHelper.runtime("compute_table_mismatch", { expected: computeBlock.tableName, actual: table.name });
     }
 
     const rows = this.buildRuntimeRows(table);
@@ -60,7 +59,7 @@ export class ComputeExecutor {
       (statement) => statement.target.columnName === columnName && statement.isOutput,
     );
     if (!outputStatement) {
-      throw new Error(`Missing output statement for compute target "${columnName}"`);
+      ThrowHelper.runtime("missing_output_statement", { name: columnName });
     }
 
     const matchedColumn = computeBlock.outputColumns.find((column) => column.name === columnName);

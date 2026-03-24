@@ -1,4 +1,5 @@
 import type { ParsedPluginBlock } from "../../types";
+import { ThrowHelper } from "../../../diagnostics";
 import type { BlockBuffer } from "../block-buffer";
 import { ParserSupport } from "../parser-support";
 
@@ -9,7 +10,7 @@ export class PluginBlockParser {
     const entries = this.support.parseKeyValueBody(blockBuffer);
     const path = entries.path;
     if (!path) {
-      throw new Error(`@plugin ${blockBuffer.name} requires a path`);
+      ThrowHelper.parser("plugin_path_required", { alias: blockBuffer.name! }, { range: ThrowHelper.pointRange(blockBuffer.source.startLine, 1) });
     }
 
     const exportsList = entries.exports

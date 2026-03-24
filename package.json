@@ -4,9 +4,14 @@
   "description": "Reference implementation for the .sheet AI-friendly spreadsheet format",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "sheet": "dist/cli/sheet.js"
+  },
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && jest --runInBand"
+    "test": "npm run build && jest --runInBand",
+    "lint:sheet": "node dist/cli/sheet.js lint",
+    "package:vscode-extension": "node scripts/package-vscode-extension.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"

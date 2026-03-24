@@ -1,5 +1,6 @@
 declare function require(name: string): any;
 
+import { ThrowHelper } from "../diagnostics";
 import { PluginModuleLoader } from "./plugin-loader";
 import { SheetSyntaxParser } from "./parser";
 import type {
@@ -81,7 +82,7 @@ export class DefaultSheetFileReader implements SheetFileReader {
     }
 
     if (!baseDirectory) {
-      throw new Error(`Cannot resolve relative plugin path without a sheet file path: ${modulePath}`);
+      ThrowHelper.runtime("relative_plugin_path_requires_file", { modulePath });
     }
 
     return path.resolve(baseDirectory, modulePath);

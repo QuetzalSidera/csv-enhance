@@ -13,11 +13,13 @@ exports: tax
 华东,香蕉,2,8,16
 华南,橙子,4,6,24
 
-@compute 销售表
-target: 含税销售额[number], 平均数量[number]
-含税销售额 = 财务插件.tax(单价, 数量)
-平均数量 = avg(数量)
+@func test(s[number])-> number
+    if(s * 0.9, s * 1.1, s)
 
+
+@compute 销售表
+target: 含税销售额[number]
+含税销售额 = 财务插件.tax(销售额)
 
 @plot 销售表
 deps: 销售额,含税销售额

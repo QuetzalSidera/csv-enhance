@@ -126,7 +126,6 @@ Column-based expressions evaluated row by row.
 @compute sales
 revenue = price * qty
 taxed = plugin.tax(price, qty)
-avg_qty = avg(qty)
 ```
 
 Rules:
@@ -134,10 +133,9 @@ Rules:
 - No A1 references.
 - Statements execute top-to-bottom.
 - Built-in operators: `+ - * / ()`
-- Built-in aggregate functions: `sum`, `avg`, `min`, `max`
 - Plugin calls use qualified names: `<alias>.<function>(...)`
-- Built-in aggregate functions execute over the current table.
 - Plugin functions execute per row and receive evaluated scalar arguments.
+- `@compute` is row-scoped and does not support cross-row aggregate functions.
 
 ### `@plot`
 

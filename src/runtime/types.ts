@@ -1,4 +1,4 @@
-import type { ExpressionNode } from "../analysis/types";
+import type { AnalyzedFuncBlock, ExpressionNode } from "../analysis/types";
 import type { PlotFieldMap, ResolvedPluginBlock, SourceRange, TableColumn } from "../file-interface/types";
 import type { MetaBlock } from "../file-interface/types";
 import type { DataCellValueType } from "../shared/value";
@@ -40,7 +40,13 @@ export interface EvaluatedComputeResult {
   source: SourceRange;
 }
 
-export type EvaluatedSheetBlock = MetaBlock | ResolvedPluginBlock | EvaluatedTable | EvaluatedComputeResult | EvaluatedPlot;
+export type EvaluatedSheetBlock =
+  | MetaBlock
+  | ResolvedPluginBlock
+  | AnalyzedFuncBlock
+  | EvaluatedTable
+  | EvaluatedComputeResult
+  | EvaluatedPlot;
 
 export interface EvaluatedSheetDocument {
   blocks: EvaluatedSheetBlock[];

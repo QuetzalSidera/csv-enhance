@@ -1,29 +1,38 @@
-import type { BinaryOperator } from "./types";
+import type { BinaryOperator } from "../analysis/types";
+import type { DiagnosticRange } from "../diagnostics";
+import { ThrowHelper } from "../diagnostics";
 
 interface Token {
   type: "number" | "identifier" | "operator" | "paren" | "comma" | "eof";
   value: string;
+  range: DiagnosticRange;
 }
 
 export type ParsedExpressionNode =
-  | { kind: "number_literal"; value: number }
-  | { kind: "identifier"; name: string }
-  | { kind: "unary_expression"; operator: "-"; operand: ParsedExpressionNode }
+  | { kind: "number_literal"; value: number; range: DiagnosticRange }
+  | { kind: "identifier"; name: string; range: DiagnosticRange }
+  | { kind: "unary_expression"; operator: "-"; operand: ParsedExpressionNode; range: DiagnosticRange }
   | {
       kind: "binary_expression";
       operator: BinaryOperator;
       left: ParsedExpressionNode;
       right: ParsedExpressionNode;
+      range: DiagnosticRange;
     }
-  | { kind: "call_expression"; callee: string; args: ParsedExpressionNode[] };
+  | { kind: "call_expression"; callee: string; calleeRange: DiagnosticRange; args: ParsedExpressionNode[]; range: DiagnosticRange };
+
+interface ExpressionOrigin {
+  line?: number;
+  column?: number;
+}
 
 export class ExpressionParser {
   private readonly tokens: Token[];
 
   private index = 0;
 
-  constructor(source: string) {
-    this.tokens = tokenizeExpression(source);
+  constructor(source: string, origin: ExpressionOrigin = {}) {
+    this.tokens = tokenizeExpression(source, origin);
   }
 
   parse(): ParsedExpressionNode {
@@ -37,11 +46,13 @@ export class ExpressionParser {
 
     while (this.match("operator", "+") || this.match("operator", "-")) {
       const operator = this.consume().value as BinaryOperator;
+      const right = this.parseTerm();
       node = {
         kind: "binary_expression",
         operator,
         left: node,
-        right: this.parseTerm(),
+        right,
+        range: mergeRanges(node.range, right.range),
       };
     }
 
@@ -53,11 +64,13 @@ export class ExpressionParser {
 
     while (this.match("operator", "*") || this.match("operator", "/")) {
       const operator = this.consume().value as BinaryOperator;
+      const right = this.parseFactor();
       node = {
         kind: "binary_expression",
         operator,
         left: node,
-        right: this.parseFactor(),
+        right,
+        range: mergeRanges(node.range, right.range),
       };
     }
 
@@ -66,11 +79,13 @@ export class ExpressionParser {
 
   private parseFactor(): ParsedExpressionNode {
     if (this.match("operator", "-")) {
-      this.consume();
+      const operatorToken = this.consume();
+      const operand = this.parseFactor();
       return {
         kind: "unary_expression",
         operator: "-",
-        operand: this.parseFactor(),
+        operand,
+        range: mergeRanges(operatorToken.range, operand.range),
       };
     }
 
@@ -82,14 +97,17 @@ export class ExpressionParser {
     }
 
     if (this.match("number")) {
+      const token = this.consume();
       return {
         kind: "number_literal",
-        value: Number(this.consume().value),
+        value: Number(token.value),
+        range: token.range,
       };
     }
 
     if (this.match("identifier")) {
-      const identifier = this.consume().value;
+      const identifierToken = this.consume();
+      const identifier = identifierToken.value;
       if (this.match("paren", "(")) {
         this.consume();
         const args: ParsedExpressionNode[] = [];
@@ -98,21 +116,25 @@ export class ExpressionParser {
             args.push(this.parseExpression());
           } while (this.match("comma") && this.consume());
         }
-        this.expect("paren", ")");
+        const closingParen = this.expect("paren", ")");
         return {
           kind: "call_expression",
           callee: identifier,
+          calleeRange: identifierToken.range,
           args,
+          range: mergeRanges(identifierToken.range, closingParen.range),
         };
       }
 
       return {
         kind: "identifier",
         name: identifier,
+        range: identifierToken.range,
       };
     }
 
-    throw new Error(`Unexpected token in expression: ${this.peek().value}`);
+    const token = this.peek();
+    ThrowHelper.parser("unexpected_expression_token", { token: token.value }, { range: token.range });
   }
 
   private match(type: Token["type"], value?: string): boolean {
@@ -123,7 +145,11 @@ export class ExpressionParser {
   private expect(type: Token["type"], value?: string): Token {
     const token = this.peek();
     if (!this.match(type, value)) {
-      throw new Error(`Expected ${value ?? type} but found ${token.value}`);
+      ThrowHelper.parser(
+        "expected_expression_token",
+        { expected: value ?? type, actual: token.value },
+        { range: token.range },
+      );
     }
     return this.consume();
   }
@@ -142,9 +168,11 @@ export class ExpressionParser {
 const IDENTIFIER_START_PATTERN = /[\p{L}_]/u;
 const IDENTIFIER_CONTINUE_PATTERN = /[\p{L}\p{N}\p{M}_]/u;
 
-function tokenizeExpression(source: string): Token[] {
+function tokenizeExpression(source: string, origin: ExpressionOrigin): Token[] {
   const tokens: Token[] = [];
   let index = 0;
+  const line = origin.line ?? 1;
+  const baseColumn = origin.column ?? 1;
 
   while (index < source.length) {
     const currentChar = source[index];
@@ -162,10 +190,14 @@ function tokenizeExpression(source: string): Token[] {
 
       const value = source.slice(index, endIndex);
       if (!/^\d+(?:\.\d+)?$/.test(value)) {
-        throw new Error(`Invalid numeric literal: ${value}`);
+        ThrowHelper.parser(
+          "invalid_numeric_literal",
+          { value },
+          { range: createRange(line, baseColumn + index, baseColumn + endIndex - 1) },
+        );
       }
 
-      tokens.push({ type: "number", value });
+      tokens.push({ type: "number", value, range: createRange(line, baseColumn + index, baseColumn + endIndex - 1) });
       index = endIndex;
       continue;
     }
@@ -182,32 +214,59 @@ function tokenizeExpression(source: string): Token[] {
       tokens.push({
         type: "identifier",
         value: source.slice(index, endIndex),
+        range: createRange(line, baseColumn + index, baseColumn + endIndex - 1),
       });
       index = endIndex;
       continue;
     }
 
     if ("+-*/".includes(currentChar)) {
-      tokens.push({ type: "operator", value: currentChar });
+      tokens.push({ type: "operator", value: currentChar, range: createRange(line, baseColumn + index, baseColumn + index) });
       index += 1;
       continue;
     }
 
     if ("()".includes(currentChar)) {
-      tokens.push({ type: "paren", value: currentChar });
+      tokens.push({ type: "paren", value: currentChar, range: createRange(line, baseColumn + index, baseColumn + index) });
       index += 1;
       continue;
     }
 
     if (currentChar === ",") {
-      tokens.push({ type: "comma", value: currentChar });
+      tokens.push({ type: "comma", value: currentChar, range: createRange(line, baseColumn + index, baseColumn + index) });
       index += 1;
       continue;
     }
 
-    throw new Error(`Unexpected character in expression: ${currentChar}`);
+    ThrowHelper.parser(
+      "unexpected_expression_character",
+      { character: currentChar },
+      { range: createRange(line, baseColumn + index, baseColumn + index) },
+    );
   }
 
-  tokens.push({ type: "eof", value: "<eof>" });
+  tokens.push({ type: "eof", value: "<eof>", range: createRange(line, baseColumn + source.length, baseColumn + source.length) });
   return tokens;
+}
+
+function createRange(line: number, startColumn: number, endColumn: number): DiagnosticRange {
+  return {
+    startLine: line,
+    startColumn,
+    startOffset: Math.max(0, startColumn - 1),
+    endLine: line,
+    endColumn,
+    endOffset: Math.max(0, endColumn - 1),
+  };
+}
+
+function mergeRanges(start: DiagnosticRange, end: DiagnosticRange): DiagnosticRange {
+  return {
+    startLine: start.startLine,
+    startColumn: start.startColumn,
+    startOffset: start.startOffset,
+    endLine: end.endLine,
+    endColumn: end.endColumn,
+    endOffset: end.endOffset,
+  };
 }

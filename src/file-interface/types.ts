@@ -1,7 +1,10 @@
 import type { DataCellValueType } from "../shared/value";
+import type { DiagnosticRange } from "../diagnostics";
 
 export type ColumnType = DataCellValueType["type"] | "dynamic";
-export type PluginExport = (...args: unknown[]) => unknown;
+export type PluginExport = ((...args: unknown[]) => unknown) & {
+  __sheetReturnType?: ColumnType;
+};
 
 export interface SourceRange {
   startLine: number;
@@ -25,8 +28,15 @@ export interface ResolvedPluginBinding {
 
 export interface ComputeStatement {
   target: string;
+  targetRange: DiagnosticRange;
   expression: string;
+  expressionRange: DiagnosticRange;
   source: SourceRange;
+}
+
+export interface FunctionParameter {
+  name: string;
+  type: ColumnType;
 }
 
 export interface ComputeBlockTargets {
@@ -44,6 +54,7 @@ export interface PlotFieldMap {
 
 export interface PlotDependencies {
   names: string[];
+  nameRanges?: Record<string, DiagnosticRange>;
   source: SourceRange;
 }
 
@@ -55,7 +66,7 @@ export interface TableColumn {
 }
 
 export interface BaseBlock {
-  kind: "meta" | "plugin" | "table" | "compute" | "plot";
+  kind: "meta" | "plugin" | "table" | "func" | "compute" | "plot";
   source: SourceRange;
 }
 
@@ -85,6 +96,15 @@ export interface TableBlock extends BaseBlock {
   rows: DataCellValueType[][];
 }
 
+export interface FuncBlock extends BaseBlock {
+  kind: "func";
+  name: string;
+  params: FunctionParameter[];
+  returnType: ColumnType;
+  expression: string;
+  expressionRange: DiagnosticRange;
+}
+
 export interface ComputeBlock extends BaseBlock {
   kind: "compute";
   tableName: string;
@@ -97,10 +117,11 @@ export interface PlotBlock extends BaseBlock {
   tableName: string;
   dependencies: PlotDependencies;
   fields: PlotFieldMap;
+  fieldRanges?: Partial<Record<keyof PlotFieldMap, DiagnosticRange>>;
 }
 
-export type ParsedSheetBlock = MetaBlock | ParsedPluginBlock | TableBlock | ComputeBlock | PlotBlock;
-export type ResolvedSheetBlock = MetaBlock | ResolvedPluginBlock | TableBlock | ComputeBlock | PlotBlock;
+export type ParsedSheetBlock = MetaBlock | ParsedPluginBlock | TableBlock | FuncBlock | ComputeBlock | PlotBlock;
+export type ResolvedSheetBlock = MetaBlock | ResolvedPluginBlock | TableBlock | FuncBlock | ComputeBlock | PlotBlock;
 
 export interface ParsedSheetDocument {
   blocks: ParsedSheetBlock[];

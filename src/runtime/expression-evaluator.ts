@@ -1,13 +1,8 @@
 import type { ExpressionNode } from "../analysis/types";
+import { ThrowHelper } from "../diagnostics";
+import { evaluateBinaryOperator, evaluateBuiltinFunction, evaluateUnaryOperator } from "../expression";
 import type { DataCellValueType } from "../shared/value";
 import type { ExpressionEvaluationContext, RuntimeRow } from "./types";
-
-const BUILTIN_EVALUATORS = {
-  sum: (values: number[]) => values.reduce((total, value) => total + value, 0),
-  avg: (values: number[]) => (values.length === 0 ? 0 : values.reduce((total, value) => total + value, 0) / values.length),
-  min: (values: number[]) => (values.length === 0 ? 0 : Math.min(...values)),
-  max: (values: number[]) => (values.length === 0 ? 0 : Math.max(...values)),
-};
 
 export class ExpressionEvaluator {
   evaluate(expression: ExpressionNode, context: ExpressionEvaluationContext): DataCellValueType {
@@ -19,14 +14,13 @@ export class ExpressionEvaluator {
       case "local_reference":
         return this.resolveRowValue(context.locals, expression.name, "local");
       case "unary_expression":
-        return {
-          type: "number",
-          value: -this.toNumber(this.evaluate(expression.operand, context)),
-        };
+        return evaluateUnaryOperator(expression.operator, this.evaluate(expression.operand, context));
       case "binary_expression":
         return this.evaluateBinaryExpression(expression, context);
       case "builtin_call":
         return this.evaluateBuiltinCall(expression, context);
+      case "func_call":
+        return this.evaluateFuncCall(expression, context);
       case "plugin_call":
         return this.evaluatePluginCall(expression, context);
     }
@@ -36,45 +30,21 @@ export class ExpressionEvaluator {
     expression: Extract<ExpressionNode, { kind: "binary_expression" }>,
     context: ExpressionEvaluationContext,
   ): DataCellValueType {
-    const left = this.toNumber(this.evaluate(expression.left, context));
-    const right = this.toNumber(this.evaluate(expression.right, context));
-
-    switch (expression.operator) {
-      case "+":
-        return { type: "number", value: left + right };
-      case "-":
-        return { type: "number", value: left - right };
-      case "*":
-        return { type: "number", value: left * right };
-      case "/":
-        if (right === 0) {
-          throw new Error("Division by zero");
-        }
-        return { type: "number", value: left / right };
-    }
+    return evaluateBinaryOperator(
+      expression.operator,
+      this.evaluate(expression.left, context),
+      this.evaluate(expression.right, context),
+    );
   }
 
   private evaluateBuiltinCall(
     expression: Extract<ExpressionNode, { kind: "builtin_call" }>,
     context: ExpressionEvaluationContext,
   ): DataCellValueType {
-    if (expression.args.length !== 1) {
-      throw new Error(`Builtin function ${expression.name} expects exactly one argument`);
-    }
-
-    const values = context.aggregateRows.map((row) =>
-      this.toNumber(
-        this.evaluate(expression.args[0], {
-          ...context,
-          row,
-        }),
-      ),
+    return evaluateBuiltinFunction(
+      expression.name,
+      expression.args.map((arg) => () => this.evaluate(arg, context)),
     );
-
-    return {
-      type: "number",
-      value: BUILTIN_EVALUATORS[expression.name](values),
-    };
   }
 
   private evaluatePluginCall(
@@ -86,6 +56,23 @@ export class ExpressionEvaluator {
     return this.fromScalarValue(result, `${expression.pluginAlias}.${expression.exportName}`);
   }
 
+  private evaluateFuncCall(
+    expression: Extract<ExpressionNode, { kind: "func_call" }>,
+    context: ExpressionEvaluationContext,
+  ): DataCellValueType {
+    const locals: Record<string, DataCellValueType> = {};
+
+    for (let index = 0; index < expression.func.params.length; index += 1) {
+      locals[expression.func.params[index].name] = this.evaluate(expression.args[index], context);
+    }
+
+    return this.evaluate(expression.func.expression, {
+      row: context.row,
+      locals,
+      aggregateRows: context.aggregateRows,
+    });
+  }
+
   private resolveRowValue(
     row: RuntimeRow | Record<string, DataCellValueType>,
     name: string,
@@ -93,18 +80,10 @@ export class ExpressionEvaluator {
   ): DataCellValueType {
     const value = row[name];
     if (!value) {
-      throw new Error(`Unknown ${label} reference "${name}" during expression evaluation`);
+      ThrowHelper.runtime("runtime_unknown_reference", { label, name });
     }
     return value;
   }
-
-  private toNumber(value: DataCellValueType): number {
-    if (value.type !== "number") {
-      throw new Error(`Expected number value, received ${value.type}`);
-    }
-    return value.value;
-  }
-
   private toScalarValue(value: DataCellValueType): string | number | boolean | null {
     return value.value;
   }
@@ -126,6 +105,6 @@ export class ExpressionEvaluator {
       return { type: "boolean", value };
     }
 
-    throw new Error(`Plugin function ${functionName} must return a scalar value`);
+    ThrowHelper.runtime("plugin_scalar_return_required", { functionName });
   }
 }
