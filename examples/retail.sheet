@@ -1,0 +1,28 @@
+@meta
+title: Weekly retail performance
+currency: USD
+owner: operations
+
+@table sales
+region,item,channel,price,qty
+North,apple,store,3,5
+North,banana,online,2,10
+South,apple,online,3,8
+South,orange,store,4,6
+West,banana,store,2,7
+West,orange,online,4,3
+
+@compute sales
+revenue = price * qty
+avg_qty = avg(qty)
+delta_from_avg = qty - avg_qty
+
+@plot sales
+type: bar
+x: item
+y: revenue
+color: region
+title: Revenue by item and region
+
+@plot sales
+line region avg_qty

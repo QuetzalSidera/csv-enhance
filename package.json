@@ -1,0 +1,15 @@
+{
+  "name": "sheet-format",
+  "version": "1.0.0",
+  "description": "Reference implementation for the .sheet AI-friendly spreadsheet format",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  },
+  "private": true
+}
