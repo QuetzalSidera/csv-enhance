@@ -10,6 +10,7 @@ import {
   PlotBlockParser,
   PluginBlockParser,
   TableBlockParser,
+  WindowBlockParser,
 } from "./parser/blocks";
 
 export class SheetSyntaxParser {
@@ -24,6 +25,8 @@ export class SheetSyntaxParser {
   private readonly funcBlockParser = new FuncBlockParser(this.support);
 
   private readonly computeBlockParser = new ComputeBlockParser(this.support);
+
+  private readonly windowBlockParser = new WindowBlockParser(this.support);
 
   private readonly plotBlockParser = new PlotBlockParser(this.support);
 
@@ -60,6 +63,12 @@ export class SheetSyntaxParser {
           this.funcBlockParser.parse({
             directive: "func",
             name: funcDirectiveMatch[1],
+            nameRange: ThrowHelper.lineFragmentRange(
+              startLine,
+              headerLine,
+              funcDirectiveMatch[1],
+              headerLine.indexOf(funcDirectiveMatch[1]) + 1,
+            ),
             headerLine,
             body,
             source: {
@@ -106,6 +115,10 @@ export class SheetSyntaxParser {
       const blockBuffer: BlockBuffer = {
         directive,
         name,
+        nameRange:
+          name !== undefined
+            ? ThrowHelper.lineFragmentRange(startLine, headerLine, name, headerLine.indexOf(name) + 1)
+            : undefined,
         headerLine,
         body,
         source: {
@@ -144,6 +157,7 @@ export class SheetSyntaxParser {
     const table = this.tableBlockParser.parse({
       directive: "table",
       name: DEFAULT_TABLE_NAME,
+      nameRange: undefined,
       headerLine: `@table ${DEFAULT_TABLE_NAME}`,
       body,
       source: {
@@ -186,6 +200,8 @@ export class SheetSyntaxParser {
         return this.computeBlockParser.parse(blockBuffer);
       case "plot":
         return this.plotBlockParser.parse(blockBuffer, tableMap);
+      case "window":
+        return this.windowBlockParser.parse(blockBuffer);
       default:
         ThrowHelper.parser(
           "unsupported_directive",

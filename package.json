@@ -1,17 +1,51 @@
 {
-  "name": "sheet-format",
-  "version": "1.0.0",
-  "description": "Reference implementation for the .sheet AI-friendly spreadsheet format",
+  "name": "csvx-lang",
+  "version": "0.1.0",
+  "description": "A lightweight spreadsheet format between CSV and XLSX, designed for humans and AI",
+  "keywords": [
+    "csvx",
+    "csv",
+    "spreadsheet",
+    "xlsx",
+    "dsl",
+    "vega-lite",
+    "typescript",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QuetzalSidera/csv-enhance.git"
+  },
+  "bugs": {
+    "url": "https://github.com/QuetzalSidera/csv-enhance/issues"
+  },
+  "homepage": "https://github.com/QuetzalSidera/csv-enhance#readme",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
+    "csvx": "dist/cli/csvx.js",
     "sheet": "dist/cli/sheet.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/clean-dist.js && tsc",
     "test": "npm run build && jest --runInBand",
+    "lint:csvx": "node dist/cli/csvx.js lint",
     "lint:sheet": "node dist/cli/sheet.js lint",
+    "prepack": "npm run build",
     "package:vscode-extension": "node scripts/package-vscode-extension.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "examples",
+    "editors/vscode-sheet/README.md",
+    "asset",
+    "README.md",
+    "README.zh-CN.md",
+    "AGENT.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
@@ -24,6 +58,5 @@
     "testMatch": [
       "<rootDir>/tests/unit/**/*.test.js"
     ]
-  },
-  "private": true
+  }
 }

@@ -1,7 +1,10 @@
 import type {
   ComputeBlock,
   FuncBlock,
+  FuncAssignmentStatement,
+  FuncReturnSpec,
   FunctionParameter,
+  FunctionValueBinding,
   MetaBlock,
   PlotBlock,
   PluginExport,
@@ -10,6 +13,7 @@ import type {
   SourceRange,
   TableBlock,
   TableColumn,
+  WindowBlock,
 } from "../file-interface/types";
 import type { DiagnosticRange, SheetWarning } from "../diagnostics";
 import type { BuiltinFunctionName } from "../expression";
@@ -62,6 +66,7 @@ export interface BinaryExpressionNode {
 export interface BuiltinCallNode {
   kind: "builtin_call";
   name: BuiltinFunctionName;
+  calleeRange: DiagnosticRange;
   args: ExpressionNode[];
   range: DiagnosticRange;
 }
@@ -69,16 +74,32 @@ export interface BuiltinCallNode {
 export interface AnalyzedFuncBlock {
   kind: "func";
   name: string;
+  nameRange?: DiagnosticRange;
   params: FunctionParameter[];
-  returnType: FuncBlock["returnType"];
-  expression: ExpressionNode;
+  returnSpec: FuncReturnSpec;
+  locals: FunctionValueBinding[];
+  statements: AnalyzedFuncStatement[];
   source: SourceRange;
 }
+
+export interface AnalyzedFuncAssignmentStatement extends Omit<FuncAssignmentStatement, "expression"> {
+  expression: ExpressionNode;
+}
+
+export interface AnalyzedFuncReturnStatement {
+  kind: "return";
+  expression: ExpressionNode;
+  expressionRange: DiagnosticRange;
+  source: SourceRange;
+}
+
+export type AnalyzedFuncStatement = AnalyzedFuncAssignmentStatement | AnalyzedFuncReturnStatement;
 
 export interface FuncCallNode {
   kind: "func_call";
   functionName: string;
   func: AnalyzedFuncBlock;
+  calleeRange: DiagnosticRange;
   args: ExpressionNode[];
   range: DiagnosticRange;
 }
@@ -88,12 +109,15 @@ export interface PluginCallNode {
   pluginAlias: string;
   exportName: string;
   fn: PluginExport;
+  calleeRange: DiagnosticRange;
   args: ExpressionNode[];
   range: DiagnosticRange;
 }
 
 export interface AnalyzeTarget {
   columnName: string;
+  column: TableColumn;
+  range?: DiagnosticRange;
 }
 
 export interface AnalyzedComputeStatement {
@@ -106,6 +130,7 @@ export interface AnalyzedComputeStatement {
 export interface AnalyzedComputeBlock {
   kind: "compute";
   tableName: string;
+  tableNameRange?: DiagnosticRange;
   outputs: AnalyzeTarget[];
   outputColumns: TableColumn[];
   locals: string[];
@@ -117,11 +142,21 @@ export interface AnalyzedPlotBlock extends PlotBlock {
   resolvedDependencies: TableColumn[];
 }
 
+export interface AnalyzedWindowBlock extends Omit<WindowBlock, "statements"> {
+  outputs: AnalyzeTarget[];
+  outputColumns: TableColumn[];
+  locals: string[];
+  statements: AnalyzedComputeStatement[];
+  resolvedOrderColumn?: TableColumn;
+  resolvedGroupColumns: TableColumn[];
+}
+
 export type AnalyzedSheetBlock =
   | MetaBlock
   | ResolvedPluginBlock
   | TableBlock
   | AnalyzedFuncBlock
+  | AnalyzedWindowBlock
   | AnalyzedPlotBlock
   | AnalyzedComputeBlock;
 

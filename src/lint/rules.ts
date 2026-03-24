@@ -30,7 +30,9 @@ function getFunctionUsage(context: LintRuleContext): Set<string> {
         });
         break;
       case "func":
-        collectExpressionReferences(block.expression, { localNames: new Set(), functionNames: usedFunctionNames });
+        block.statements.forEach((statement) => {
+          collectExpressionReferences(statement.expression, { localNames: new Set(), functionNames: usedFunctionNames });
+        });
         break;
       default:
         break;

@@ -1,9 +1,9 @@
 const path = require("path");
 const { SheetCompiler, XlsxAdapter } = require("../dist/index.js");
 
-// Compile the bundled retail.sheet file and export an .xlsx workbook beside it.
+// Compile the bundled retail.csvx file and export an .xlsx workbook beside it.
 const projectRoot = path.resolve(__dirname, "..");
-const inputPath = path.resolve(projectRoot, "examples/retail.sheet");
+const inputPath = path.resolve(projectRoot, "examples/retail.csvx");
 const outputPath = path.resolve(projectRoot, "examples/retail.xlsx");
 
 const compiler = new SheetCompiler();

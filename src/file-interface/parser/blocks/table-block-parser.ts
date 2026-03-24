@@ -11,6 +11,7 @@ export class TableBlockParser {
     return {
       kind: "table",
       name: blockBuffer.name!,
+      nameRange: blockBuffer.nameRange,
       columns: content.columns,
       rows: content.rows,
       source: blockBuffer.source,

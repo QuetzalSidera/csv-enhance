@@ -1,16 +1,26 @@
 export { DefaultSheetFileReader, type SheetFileReader } from "./file-interface/reader";
+export { SheetLanguageService } from "./editor";
 export { ThrowHelper } from "./diagnostics";
 export { WarningCollector, WarningHelper } from "./diagnostics";
 export { SheetLinter } from "./lint";
 export { PluginModuleLoader } from "./file-interface/plugin-loader";
 export { SheetSyntaxParser } from "./file-interface/parser";
 export { SheetSemanticAnalyzer } from "./analysis/analyzer";
-export { ExpressionParser, type BuiltinFunctionName, type ParsedExpressionNode } from "./expression";
+export {
+  ExpressionParser,
+  BUILTIN_FUNCTION_NAMES,
+  isBuiltinFunction,
+  isKnownBuiltinFunction,
+  type BuiltinFunctionName,
+  type ExpressionContextKind,
+  type ParsedExpressionNode,
+} from "./expression";
 export { ComputeExecutor } from "./runtime/compute-executor";
 export { DocumentExecutor } from "./runtime/document-executor";
 export { ExpressionEvaluator } from "./runtime/expression-evaluator";
 export { PlotCompiler } from "./runtime/plot-compiler";
 export { SheetCompiler } from "./runtime/sheet-compiler";
+export { WindowExecutor } from "./runtime/window-executor";
 export { XlsxAdapter } from "./runtime/xlsx-adapter";
 export type {
   ColumnType,
@@ -36,6 +46,7 @@ export type {
   SourceRange,
   TableBlock,
   TableColumn,
+  WindowBlock,
 } from "./file-interface/types";
 export type {
   AnalysisContext,
@@ -44,6 +55,7 @@ export type {
   AnalyzedPlotBlock,
   AnalyzedSheetDocument,
   AnalyzedSheetBlock,
+  AnalyzedWindowBlock,
   AnalyzeTarget,
   AnalyzedFuncBlock,
   BinaryExpressionNode,
@@ -63,6 +75,7 @@ export type {
   EvaluatedSheetBlock,
   EvaluatedSheetDocument,
   EvaluatedTable,
+  EvaluatedWindowResult,
   ExpressionEvaluationContext,
   RuntimeRow,
 } from "./runtime/types";
@@ -81,6 +94,14 @@ export {
 } from "./diagnostics";
 export type { DiagnosticLocale, DiagnosticOptions, DiagnosticPhase, DiagnosticRange, DiagnosticSeverity, SheetWarning } from "./diagnostics";
 export type { LintIssue, LintPhase, LintResult, LintRule, LintRuleContext, LintSeverity } from "./lint";
+export type {
+  DefinitionInfo,
+  EditorPosition,
+  HoverInfo,
+  LanguageServiceResult,
+  SheetSymbol,
+  SheetSymbolKind,
+} from "./editor";
 export type {
   AnalysisDiagnosticKey,
   DiagnosticKeySpec,

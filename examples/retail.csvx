@@ -4,10 +4,15 @@ title: Weekly retail workbook
 currency: USD
 owner: operations
 
-# Plugin paths are resolved relative to this .sheet file.
+# Plugin paths are resolved relative to this .csvx file.
 @plugin plugin
 path: ./plugins/finance.ts
 exports: tax, bucket
+
+# Reusable scalar helper function.
+@func 折后单价(price[number], qty[number]) => number
+折后价格[number] = price * 0.95;
+return 折后价格;
 
 # Raw sales data.
 @table sales
@@ -22,12 +27,20 @@ West,orange,online,4,3
 # Compute outputs must be declared with target:.
 @compute sales
 target: revenue[number], taxed_revenue[number]
-revenue = price * qty
+base_price[number] = 折后单价(price, qty)
+revenue = base_price * qty
 taxed_revenue = plugin.tax(price, qty)
+
+@window sales
+group: region
+order: qty
+target: running_revenue[number], previous_revenue[number]
+running_revenue = cumsum(revenue)
+previous_revenue = lag(revenue, 1)
 
 # Bar plots must declare deps: and may only reference number columns.
 @plot sales
-deps: price,qty
-x: price
-y: qty
-title: Price and quantity bar demo
+deps: revenue,running_revenue
+x: revenue
+y: running_revenue
+title: Revenue and running revenue bar demo

@@ -4,7 +4,20 @@ import type { DiagnosticRange } from "../diagnostics";
 import type { DataCellValueType } from "../shared/value";
 import type { BinaryOperator } from "../analysis/types";
 
-export type BuiltinFunctionName = "if" | "coalesce" | "and" | "or";
+export type ExpressionContextKind = "compute" | "func" | "window";
+export type BuiltinFunctionName =
+  | "if"
+  | "coalesce"
+  | "and"
+  | "or"
+  | "current"
+  | "lag"
+  | "lead"
+  | "first"
+  | "last"
+  | "row_number"
+  | "rank"
+  | "cumsum";
 
 interface BuiltinArgumentType {
   type: ColumnType;
@@ -12,12 +25,14 @@ interface BuiltinArgumentType {
 }
 
 interface BuiltinFunctionDefinition {
+  allowedContexts: ExpressionContextKind[];
   inferReturnType: (args: BuiltinArgumentType[], callRange?: DiagnosticRange) => ColumnType;
   evaluate: (args: Array<() => DataCellValueType>) => DataCellValueType;
 }
 
 const BUILTIN_FUNCTIONS: Record<BuiltinFunctionName, BuiltinFunctionDefinition> = {
   if: {
+    allowedContexts: ["compute", "func", "window"],
     inferReturnType(args, callRange) {
       if (args.length !== 3) {
         ThrowHelper.analysis("builtin_if_arity", {}, callRange ? { range: callRange } : {});
@@ -40,6 +55,7 @@ const BUILTIN_FUNCTIONS: Record<BuiltinFunctionName, BuiltinFunctionDefinition> 
     },
   },
   coalesce: {
+    allowedContexts: ["compute", "func", "window"],
     inferReturnType(args, callRange) {
       if (args.length === 0) {
         ThrowHelper.analysis("builtin_coalesce_arity", {}, callRange ? { range: callRange } : {});
@@ -70,6 +86,7 @@ const BUILTIN_FUNCTIONS: Record<BuiltinFunctionName, BuiltinFunctionDefinition> 
     },
   },
   and: {
+    allowedContexts: ["compute", "func", "window"],
     inferReturnType(args, callRange) {
       if (args.length === 0) {
         ThrowHelper.analysis("builtin_and_arity", {}, callRange ? { range: callRange } : {});
@@ -100,6 +117,7 @@ const BUILTIN_FUNCTIONS: Record<BuiltinFunctionName, BuiltinFunctionDefinition> 
     },
   },
   or: {
+    allowedContexts: ["compute", "func", "window"],
     inferReturnType(args, callRange) {
       if (args.length === 0) {
         ThrowHelper.analysis("builtin_or_arity", {}, callRange ? { range: callRange } : {});
@@ -129,28 +147,53 @@ const BUILTIN_FUNCTIONS: Record<BuiltinFunctionName, BuiltinFunctionDefinition> 
       return { type: "boolean", value: false };
     },
   },
+  current: createWindowOnlyBuiltin("current", 1),
+  lag: createWindowOnlyBuiltin("lag", 2),
+  lead: createWindowOnlyBuiltin("lead", 2),
+  first: createWindowOnlyBuiltin("first", 1),
+  last: createWindowOnlyBuiltin("last", 1),
+  row_number: createWindowOnlyBuiltin("row_number", 0),
+  rank: createWindowOnlyBuiltin("rank", 0),
+  cumsum: createWindowOnlyBuiltin("cumsum", 1),
 };
 
-export function isBuiltinFunction(name: string): name is BuiltinFunctionName {
+export const BUILTIN_FUNCTION_NAMES = Object.keys(BUILTIN_FUNCTIONS) as BuiltinFunctionName[];
+
+export function isBuiltinFunction(name: string, context?: ExpressionContextKind): name is BuiltinFunctionName {
+  if (!Object.prototype.hasOwnProperty.call(BUILTIN_FUNCTIONS, name)) {
+    return false;
+  }
+  if (!context) {
+    return true;
+  }
+  return BUILTIN_FUNCTIONS[name as BuiltinFunctionName].allowedContexts.includes(context);
+}
+
+export function isKnownBuiltinFunction(name: string): name is BuiltinFunctionName {
   return Object.prototype.hasOwnProperty.call(BUILTIN_FUNCTIONS, name);
 }
 
-export function inferBuiltinFunctionType(name: BuiltinFunctionName, argTypes: ColumnType[]): ColumnType {
+export function inferBuiltinFunctionType(name: BuiltinFunctionName, argTypes: ColumnType[], context: ExpressionContextKind): ColumnType {
+  assertBuiltinAvailableInContext(name, context);
   return BUILTIN_FUNCTIONS[name].inferReturnType(argTypes.map((type) => ({ type })));
 }
 
 export function inferBuiltinFunctionTypeWithRanges(
   name: BuiltinFunctionName,
   args: BuiltinArgumentType[],
+  context: ExpressionContextKind,
   callRange?: DiagnosticRange,
 ): ColumnType {
+  assertBuiltinAvailableInContext(name, context, callRange);
   return BUILTIN_FUNCTIONS[name].inferReturnType(args, callRange);
 }
 
 export function evaluateBuiltinFunction(
   name: BuiltinFunctionName,
   args: Array<() => DataCellValueType>,
+  context: ExpressionContextKind,
 ): DataCellValueType {
+  assertBuiltinAvailableInContext(name, context);
   return BUILTIN_FUNCTIONS[name].evaluate(args);
 }
 
@@ -230,4 +273,37 @@ function toNumber(value: DataCellValueType, context: string): number {
     ThrowHelper.runtime("number_runtime_required", { context, actual: value.type });
   }
   return value.value;
+}
+
+function createWindowOnlyBuiltin(name: BuiltinFunctionName, arity: number): BuiltinFunctionDefinition {
+  return {
+    allowedContexts: ["window"],
+    inferReturnType(args, callRange) {
+      if (args.length !== arity) {
+        ThrowHelper.analysis(
+          "function_arity_mismatch",
+          { name, expected: arity, actual: args.length },
+          callRange ? { range: callRange } : {},
+        );
+      }
+      return "dynamic";
+    },
+    evaluate() {
+      ThrowHelper.runtime("runtime_unknown_reference", { label: "local", name: `${name}.window` });
+    },
+  };
+}
+
+function assertBuiltinAvailableInContext(
+  name: BuiltinFunctionName,
+  context: ExpressionContextKind,
+  range?: DiagnosticRange,
+): void {
+  if (!BUILTIN_FUNCTIONS[name].allowedContexts.includes(context)) {
+    ThrowHelper.analysis(
+      "builtin_context_not_allowed",
+      { name, context },
+      range ? { range } : {},
+    );
+  }
 }

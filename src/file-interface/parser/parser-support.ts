@@ -4,14 +4,17 @@ import { inferColumnTypeFromCells, parseDeclaredDataCellValue } from "../../shar
 import type {
   ColumnType,
   ComputeBlockTargets,
+  FuncReturnSpec,
   FunctionParameter,
+  FunctionValueBinding,
   PlotDependencies,
   PlotFieldMap,
   SourceRange,
   TableBlock,
   TableColumn,
+  ValueShape,
 } from "../types";
-import { COLUMN_PATTERN, IDENTIFIER_PATTERN } from "./parser-config";
+import { COLUMN_PATTERN, FUNCTION_VALUE_PATTERN, IDENTIFIER_PATTERN } from "./parser-config";
 import type { BlockBuffer } from "./block-buffer";
 
 export class ParserSupport {
@@ -100,6 +103,18 @@ export class ParserSupport {
   }
 
   parseComputeTargets(blockBuffer: BlockBuffer): ComputeBlockTargets {
+    return this.parseTargetColumns(blockBuffer, "@compute", "compute_target_required");
+  }
+
+  parseWindowTargets(blockBuffer: BlockBuffer): ComputeBlockTargets {
+    return this.parseTargetColumns(blockBuffer, "@window", "window_target_required");
+  }
+
+  private parseTargetColumns(
+    blockBuffer: BlockBuffer,
+    contextLabel: "@compute" | "@window",
+    missingKey: "compute_target_required" | "window_target_required",
+  ): ComputeBlockTargets {
     for (let offset = 0; offset < blockBuffer.body.length; offset += 1) {
       const line = blockBuffer.body[offset].trim();
       if (this.shouldIgnoreLine(blockBuffer.body[offset])) {
@@ -107,14 +122,14 @@ export class ParserSupport {
       }
 
       if (!line.startsWith("target:")) {
-        break;
+        continue;
       }
 
       const rawLine = blockBuffer.body[offset];
       const rawValue = line.slice("target:".length);
       const columns = this.parseComputeTargetColumns(
         rawValue,
-        "@compute target",
+        `${contextLabel} target`,
         blockBuffer.bodyStartLine + offset,
         rawLine,
       );
@@ -125,7 +140,7 @@ export class ParserSupport {
     }
 
     ThrowHelper.parser(
-      "compute_target_required",
+      missingKey,
       { table: blockBuffer.name! },
       {
         range: ThrowHelper.pointRange(blockBuffer.source.startLine, 1),
@@ -188,13 +203,14 @@ export class ParserSupport {
 
   private parseTableColumns(headerCells: string[], tableName: string, line?: number, rawLine?: string): TableColumn[] {
     const columns = headerCells.map((headerCell) => {
-      const match = headerCell.trim().match(COLUMN_PATTERN);
+      const trimmedHeaderCell = headerCell.trim();
+      const match = trimmedHeaderCell.match(COLUMN_PATTERN);
       if (!match) {
         ThrowHelper.parser(
           "invalid_column_declaration",
           { declaration: headerCell, table: tableName },
           line !== undefined && rawLine !== undefined
-            ? { range: this.findValueRange(rawLine, rawLine, headerCell.trim(), line) }
+            ? { range: this.findValueRange(rawLine, rawLine, trimmedHeaderCell, line) }
             : {},
         );
       }
@@ -202,6 +218,10 @@ export class ParserSupport {
       const declaredType = (match[2] ?? "dynamic") as ColumnType;
       return {
         name: match[1],
+        nameRange:
+          line !== undefined && rawLine !== undefined
+            ? this.findValueRange(rawLine, rawLine, trimmedHeaderCell, line)
+            : undefined,
         declaredType,
         columnType: declaredType,
         isTypeExplicit: match[2] !== undefined,
@@ -253,6 +273,10 @@ export class ParserSupport {
       const declaredType = (match[2] ?? "dynamic") as ColumnType;
       return {
         name: match[1],
+        nameRange:
+          line !== undefined && rawLine !== undefined
+            ? this.findValueRange(rawLine, rawValue, targetCell, line)
+            : undefined,
         declaredType,
         columnType: declaredType,
         isTypeExplicit: match[2] !== undefined,
@@ -270,7 +294,7 @@ export class ParserSupport {
     return columns;
   }
 
-  private parseNameList(rawValue: string, context: string, line?: number, rawLine?: string): string[] {
+  parseNameList(rawValue: string, context: string, line?: number, rawLine?: string): string[] {
     const names = rawValue
       .split(",")
       .map((value) => value.trim())
@@ -306,23 +330,8 @@ export class ParserSupport {
       .map((value) => value.trim())
       .filter(Boolean);
     const params = paramValues.map((paramValue) => {
-        const match = paramValue.match(COLUMN_PATTERN);
-        if (!match) {
-          ThrowHelper.parser(
-            "invalid_function_parameter",
-            { param: paramValue, context },
-            line !== undefined && rawLine !== undefined
-              ? { range: this.findValueRange(rawLine, rawValue, paramValue, line) }
-              : {},
-          );
-        }
-
-        const declaredType = (match[2] ?? "dynamic") as ColumnType;
-        return {
-          name: match[1],
-          type: declaredType,
-        };
-      });
+      return this.parseFunctionValueBinding(paramValue, context, "scalar", line, rawLine, rawValue);
+    });
 
     this.ensureUniqueIdentifiers(
       params.map((param) => param.name),
@@ -335,6 +344,92 @@ export class ParserSupport {
     return params;
   }
 
+  parseFunctionValueBinding(
+    rawValue: string,
+    context: string,
+    defaultShape: ValueShape,
+    line?: number,
+    rawLine?: string,
+    parentRawValue?: string,
+  ): FunctionValueBinding {
+    const trimmedValue = rawValue.trim();
+    const match = trimmedValue.match(FUNCTION_VALUE_PATTERN);
+    if (!match) {
+      ThrowHelper.parser(
+        "invalid_function_parameter",
+        { param: trimmedValue, context },
+        line !== undefined && rawLine !== undefined
+          ? { range: this.findValueRange(rawLine, parentRawValue ?? rawLine, trimmedValue, line) }
+          : {},
+      );
+    }
+
+    return {
+      name: match[1],
+      nameRange:
+        line !== undefined && rawLine !== undefined
+          ? this.findValueRange(rawLine, parentRawValue ?? rawLine, trimmedValue, line)
+          : undefined,
+      shape: this.resolveValueShape(match[2], defaultShape),
+      type: match[3] as ColumnType,
+    };
+  }
+
+  parseFunctionReturnSpec(
+    scalarType: string | undefined,
+    shapedType: string | undefined,
+    shapedShape: string | undefined,
+    line: number,
+    rawLine: string,
+  ): FuncReturnSpec {
+    if (scalarType) {
+      return {
+        type: scalarType as ColumnType,
+        shape: "scalar",
+        range: this.findValueRange(rawLine, rawLine, scalarType, line),
+      };
+    }
+
+    if (!shapedType) {
+      ThrowHelper.parser("invalid_func_signature", { signature: rawLine.trim() }, { range: ThrowHelper.pointRange(line, 1) });
+    }
+
+    const returnToken = shapedShape ? `[${shapedShape}:${shapedType}]` : `[${shapedType}]`;
+    return {
+      type: shapedType as ColumnType,
+      shape: this.resolveValueShape(shapedShape, "col"),
+      range: this.findValueRange(rawLine, rawLine, returnToken, line),
+    };
+  }
+
+  splitSemicolonStatements(rawLine: string, line: number): Array<{ value: string; range: import("../../diagnostics").DiagnosticRange }> {
+    const statements: Array<{ value: string; range: import("../../diagnostics").DiagnosticRange }> = [];
+    let statementStart = 0;
+
+    for (let index = 0; index <= rawLine.length; index += 1) {
+      const isBoundary = index === rawLine.length || rawLine[index] === ";";
+      if (!isBoundary) {
+        continue;
+      }
+
+      const segment = rawLine.slice(statementStart, index);
+      const trimmedSegment = segment.trim();
+      if (trimmedSegment !== "") {
+        const leadingWhitespaceMatch = segment.match(/^\s*/);
+        const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[0].length : 0;
+        const startColumn = statementStart + leadingWhitespace + 1;
+        statements.push({
+          value: trimmedSegment,
+          range: ThrowHelper.lineFragmentRange(line, rawLine, trimmedSegment, startColumn),
+        });
+      }
+
+      statementStart = index + 1;
+    }
+
+    return statements;
+  }
+
   findValueRange(rawLine: string, rawValue: string, value: string, line: number): import("../../diagnostics").DiagnosticRange {
     const rawValueStart = rawLine.indexOf(rawValue);
     const valueStartInRawValue = rawValue.indexOf(value);
@@ -342,7 +437,7 @@ export class ParserSupport {
     return ThrowHelper.lineFragmentRange(line, rawLine, value, column);
   }
 
-  private buildNameRangeMap(
+  buildNameRangeMap(
     rawValue: string,
     names: string[],
     line: number,
@@ -353,5 +448,12 @@ export class ParserSupport {
       ranges[name] = this.findValueRange(rawLine, rawValue, name, line);
     });
     return ranges;
+  }
+
+  private resolveValueShape(rawShape: string | undefined, defaultShape: ValueShape): ValueShape {
+    if (rawShape === "row" || rawShape === "col") {
+      return rawShape;
+    }
+    return defaultShape;
   }
 }

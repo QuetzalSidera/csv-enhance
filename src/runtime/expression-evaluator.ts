@@ -44,6 +44,7 @@ export class ExpressionEvaluator {
     return evaluateBuiltinFunction(
       expression.name,
       expression.args.map((arg) => () => this.evaluate(arg, context)),
+      "compute",
     );
   }
 
@@ -66,11 +67,24 @@ export class ExpressionEvaluator {
       locals[expression.func.params[index].name] = this.evaluate(expression.args[index], context);
     }
 
-    return this.evaluate(expression.func.expression, {
-      row: context.row,
-      locals,
-      aggregateRows: context.aggregateRows,
-    });
+    for (const statement of expression.func.statements) {
+      if (statement.kind === "assign") {
+        locals[statement.target.name] = this.evaluate(statement.expression, {
+          row: context.row,
+          locals,
+          aggregateRows: context.aggregateRows,
+        });
+        continue;
+      }
+
+      return this.evaluate(statement.expression, {
+        row: context.row,
+        locals,
+        aggregateRows: context.aggregateRows,
+      });
+    }
+
+    ThrowHelper.runtime("runtime_unknown_reference", { label: "local", name: `${expression.functionName}.return` });
   }
 
   private resolveRowValue(

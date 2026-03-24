@@ -1,9 +1,10 @@
 {
-  "name": "sheet-language-support",
-  "displayName": ".sheet Language Support",
-  "description": "Syntax highlighting and editor configuration for .sheet files",
-  "version": "0.1.0",
-  "publisher": "local",
+  "name": "csvx-language-support",
+  "displayName": "CSVX Spreadsheet Tools",
+  "description": "Editor support for .csvx files with highlighting, diagnostics, hover, navigation, and completion",
+  "version": "0.1.1",
+  "publisher": "QianShuang",
+  "icon": "images/icon.png",
   "main": "./extension.js",
   "engines": {
     "vscode": "^1.85.0"
@@ -12,17 +13,19 @@
     "Programming Languages"
   ],
   "activationEvents": [
-    "onLanguage:sheet"
+    "onLanguage:csvx"
   ],
   "contributes": {
     "languages": [
       {
-        "id": "sheet",
+        "id": "csvx",
         "aliases": [
-          "sheet",
+          "csvx",
+          ".csvx",
           ".sheet"
         ],
         "extensions": [
+          ".csvx",
           ".sheet"
         ],
         "configuration": "./language-configuration.json"
@@ -30,9 +33,9 @@
     ],
     "grammars": [
       {
-        "language": "sheet",
-        "scopeName": "source.sheet",
-        "path": "./syntaxes/sheet.tmLanguage.json"
+        "language": "csvx",
+        "scopeName": "source.csvx",
+        "path": "./syntaxes/csvx.tmLanguage.json"
       }
     ]
   }

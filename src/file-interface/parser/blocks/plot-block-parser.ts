@@ -29,6 +29,7 @@ export class PlotBlockParser {
     return {
       kind: "plot",
       tableName: blockBuffer.name!,
+      tableNameRange: blockBuffer.nameRange,
       dependencies: this.support.parsePlotDependencies(blockBuffer, fields),
       fields,
       fieldRanges,

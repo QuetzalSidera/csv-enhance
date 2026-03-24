@@ -1,4 +1,5 @@
 import type { AnalyzedFuncBlock, ExpressionNode } from "../analysis/types";
+import type { AnalyzedWindowBlock } from "../analysis/types";
 import type { PlotFieldMap, ResolvedPluginBlock, SourceRange, TableColumn } from "../file-interface/types";
 import type { MetaBlock } from "../file-interface/types";
 import type { DataCellValueType } from "../shared/value";
@@ -40,12 +41,20 @@ export interface EvaluatedComputeResult {
   source: SourceRange;
 }
 
+export interface EvaluatedWindowResult {
+  kind: "window";
+  tableName: string;
+  table: EvaluatedTable;
+  source: SourceRange;
+}
+
 export type EvaluatedSheetBlock =
   | MetaBlock
   | ResolvedPluginBlock
   | AnalyzedFuncBlock
   | EvaluatedTable
   | EvaluatedComputeResult
+  | EvaluatedWindowResult
   | EvaluatedPlot;
 
 export interface EvaluatedSheetDocument {

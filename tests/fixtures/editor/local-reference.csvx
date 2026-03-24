@@ -1,0 +1,8 @@
+@table 销售表
+销售额[number]
+15
+
+@compute 销售表
+target: 含税销售额[number]
+test = 销售额
+含税销售额 = test

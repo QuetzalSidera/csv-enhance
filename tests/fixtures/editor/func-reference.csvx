@@ -1,0 +1,11 @@
+@func 税额(销售额[number]) => number
+临时金额[number] = 销售额 * 1.1;
+return 临时金额;
+
+@table 销售表
+销售额[number]
+15
+
+@compute 销售表
+target: 含税销售额[number]
+含税销售额 = 税额(销售额)

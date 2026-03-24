@@ -1,0 +1,12 @@
+@table 销售表
+销售额[number]
+15
+
+@compute 销售表
+target: 含税销售额[number]
+含税销售额 = 销售额
+
+@plot 销售表
+deps: 销售额,含税销售额
+x: 销售额
+y: 含税销售额

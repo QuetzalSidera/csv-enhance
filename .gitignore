@@ -50,6 +50,7 @@ web_modules/
 
 # Optional npm cache directory
 .npm
+.npm-cache
 
 # Optional eslint cache
 .eslintcache
@@ -161,4 +162,3 @@ vite.config.ts.timestamp-*
 # misc
 .DS_Store
 *.pem
-

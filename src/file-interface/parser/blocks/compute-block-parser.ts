@@ -1,8 +1,9 @@
 import type { ComputeBlock, ComputeStatement } from "../../types";
 import { ThrowHelper } from "../../../diagnostics";
-import { IDENTIFIER_PATTERN } from "../parser-config";
+import { COLUMN_PATTERN } from "../parser-config";
 import { ParserSupport } from "../parser-support";
 import type { BlockBuffer } from "../block-buffer";
+import type { ColumnType } from "../../types";
 
 export class ComputeBlockParser {
   constructor(private readonly support: ParserSupport) {}
@@ -30,12 +31,21 @@ export class ComputeBlockParser {
       const expression = line.slice(separatorIndex + 1).trim();
       const targetColumn = rawLine.indexOf(target) + 1;
       const expressionColumn = rawLine.indexOf(expression, separatorIndex + 1) + 1;
-      if (!IDENTIFIER_PATTERN.test(target)) {
+      const targetMatch = target.match(COLUMN_PATTERN);
+      if (!targetMatch) {
         ThrowHelper.parser("invalid_compute_target", { target }, { range: ThrowHelper.lineFragmentRange(lineNumber, rawLine, target, targetColumn) });
       }
 
+      const declaredType = (targetMatch[2] ?? "dynamic") as ColumnType;
+
       statements.push({
-        target,
+        target: targetMatch[1],
+        targetColumn: {
+          name: targetMatch[1],
+          declaredType,
+          columnType: declaredType,
+          isTypeExplicit: targetMatch[2] !== undefined,
+        },
         targetRange: ThrowHelper.lineFragmentRange(lineNumber, rawLine, target, targetColumn),
         expression,
         expressionRange: ThrowHelper.lineFragmentRange(lineNumber, rawLine, expression, expressionColumn),
@@ -46,6 +56,7 @@ export class ComputeBlockParser {
     return {
       kind: "compute",
       tableName: blockBuffer.name!,
+      tableNameRange: blockBuffer.nameRange,
       targets,
       statements,
       source: blockBuffer.source,

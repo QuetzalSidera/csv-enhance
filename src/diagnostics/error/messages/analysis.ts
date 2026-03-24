@@ -8,6 +8,8 @@ export const ANALYSIS_ERROR_MESSAGES: Record<AnalysisDiagnosticKey, MessageForma
   builtin_function_name_reserved: ({ name }) => `@func ${name} conflicts with reserved builtin function "${name}"`,
   duplicate_plugin_alias: ({ name }) => `Duplicate plugin alias "${name}"`,
   unknown_compute_table: ({ table }) => `Unknown table for @compute ${table}`,
+  unknown_window_table: ({ table }) => `Unknown table for @window ${table}`,
+  unknown_window_order: ({ column, table }) => `Unknown order column "${column}" in @window ${table}`,
   unknown_function: ({ name }) => `Unknown function "${name}"`,
   recursive_function_call: ({ path }) => `Recursive @func call detected: ${path}`,
   unknown_plot_dependency: ({ dependency, table }) => `Unknown plot dependency "${dependency}" in @plot ${table}`,
@@ -16,9 +18,13 @@ export const ANALYSIS_ERROR_MESSAGES: Record<AnalysisDiagnosticKey, MessageForma
   function_arity_mismatch: ({ name, expected, actual }) =>
     `Function "${name}" expects ${expected} arguments but received ${actual}`,
   unsupported_function_call: ({ callee }) => `Unsupported function call "${callee}"`,
+  builtin_context_not_allowed: ({ name, context }) =>
+    `Builtin function "${name}" is not available in ${context} expressions`,
+  non_scalar_function_call: ({ callee, shape }) =>
+    `Function "${callee}" returns ${shape} values and cannot be used in a scalar expression context`,
   unknown_plugin_alias: ({ alias }) => `Unknown plugin alias "${alias}"`,
   unknown_plugin_export: ({ callee }) => `Unknown plugin export "${callee}"`,
-  unknown_function_parameter_reference: ({ name, func }) => `Unknown parameter reference "${name}" in @func ${func}`,
+  unknown_function_parameter_reference: ({ name, func }) => `Unknown local or parameter reference "${name}" in @func ${func}`,
   type_mismatch: ({ context, expected, actual }) => `${context} expects ${expected} but expression resolves to ${actual}`,
   plot_field_missing: ({ table, field }) => `@plot ${table} must define ${field}`,
   plot_field_not_in_deps: ({ field, value }) => `Plot field "${field}" must be declared in deps: ${value}`,

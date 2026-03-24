@@ -1,8 +1,9 @@
-# `.sheet` VS Code Language Support
+# `.csvx` VS Code Language Support
 
-This extension provides the first editor integration layer for `.sheet` files:
+This extension provides the first editor integration layer for `.csvx` files:
 
-- `.sheet` file association
+- `.csvx` file association
+- `.sheet` legacy compatibility association
 - `#` comment support
 - bracket and quote pairing
 - inline diagnostics powered by the project linter
@@ -30,7 +31,7 @@ npm run package:vscode-extension
 
 This generates:
 
-`editors/vscode-sheet/sheet-language-support-0.1.0.vsix`
+`editors/vscode-sheet/csvx-language-support-0.1.0.vsix`
 
 ## Install In VS Code
 
@@ -45,7 +46,7 @@ This generates:
 
    `editors/vscode-sheet`
 3. Press `F5`.
-4. Test `.sheet` files in the new Extension Development Host window.
+4. Test `.csvx` or `.sheet` files in the new Extension Development Host window.
 
 ## Next Step
 

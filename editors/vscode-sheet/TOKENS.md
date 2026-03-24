@@ -1,6 +1,6 @@
-# `.sheet` Editor Token Classes
+# `.csvx` Editor Token Classes
 
-This document defines the editor-facing token taxonomy for `.sheet` files.
+This document defines the editor-facing token taxonomy for `.csvx` files.
 The VS Code grammar should map syntax into these semantic roles first, then
 choose TextMate scopes that align with common TypeScript themes.
 

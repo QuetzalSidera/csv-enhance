@@ -1,119 +1,135 @@
-# `.sheet` File Interface
+<p align="center">
+  <img src="./asset/Logo.webp" alt="CSVX logo" width="160" />
+</p>
 
-This refactor focuses on the file interface layer first, following the architecture notes in `Comment.md`.
+<h1 align="center">CSVX</h1>
 
-Current scope:
+<p align="center">
+  Lightweight, AI-friendly, text-first spreadsheets.
+</p>
 
-- file-oriented entry API
-- block-level syntax parsing
-- expression AST parsing
-- semantic analysis for `@compute`
-- local `@func` pure-expression reuse
-- compute execution runtime
-- document execution runtime
-- Vega-Lite bar plot compilation
-- `.xlsx` workbook export
-- end-to-end `compile` facade
-- typed table cell representation
-- typed table column declaration and inference
-- source metadata for each parsed block
-- `#` comment line support
+<p align="center">
+  <a href="https://github.com/QuetzalSidera/csv-enhance"><img alt="repo" src="https://img.shields.io/badge/GitHub-csv--enhance-111827?logo=github"></a>
+  <img alt="npm" src="https://img.shields.io/badge/npm-csvx--lang-cb3837?logo=npm">
+  <img alt="version" src="https://img.shields.io/badge/version-0.1.0-111827">
+  <img alt="status" src="https://img.shields.io/badge/status-demo-f59e0b">
+  <img alt="language" src="https://img.shields.io/badge/language-TypeScript-3178c6">
+  <img alt="export" src="https://img.shields.io/badge/export-.xlsx-16a34a">
+  <img alt="editor" src="https://img.shields.io/badge/editor-VS%20Code-007acc">
+  <img alt="tests" src="https://img.shields.io/badge/tests-68%20passing-22c55e">
+</p>
 
-Not part of this phase:
+CSVX is a lightweight, AI-friendly, text-first spreadsheet format.
 
-- syntax static analysis
-- xlsx adapter
+It sits in the space between:
 
-## Structure
+- CSV
+- spreadsheets
+- structured data DSLs
 
-- [src/file-interface/reader.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/file-interface/reader.ts): file interface and default reader
-- [src/file-interface/parser.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/file-interface/parser.ts): parser entry and block dispatch
-- [src/file-interface/parser/blocks](/Users/qianshuang/Project/WebProject/csv-enhance/src/file-interface/parser/blocks): per-block parsers
-- [src/file-interface/parser/parser-support.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/file-interface/parser/parser-support.ts): shared parsing helpers
-- [src/file-interface/types.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/file-interface/types.ts): document and block types
-- [src/analysis/expression-parser.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/analysis/expression-parser.ts): expression AST parser
-- [src/analysis/analyzer.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/analysis/analyzer.ts): semantic binding for compute expressions
-- [src/runtime/document-executor.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/runtime/document-executor.ts): document-order runtime execution
-- [src/runtime/plot-compiler.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/runtime/plot-compiler.ts): Vega-Lite bar spec compiler
-- [src/runtime/sheet-compiler.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/runtime/sheet-compiler.ts): high-level compile facade
-- [src/runtime/xlsx-adapter.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/runtime/xlsx-adapter.ts): workbook export with table sheets and `_plots` metadata
-- [src/shared/value.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/shared/value.ts): typed cell inference
-- [src/shared/csv.ts](/Users/qianshuang/Project/WebProject/csv-enhance/src/shared/csv.ts): CSV line parsing
+CSVX is designed to be:
 
-## Example
+- easy to read in plain text
+- friendly to version control
+- expressive enough for computed columns and window columns
+- compilable into `.xlsx`
+- pleasant to work with in editors and automation flows
 
-```ts
-import { SheetCompiler } from "./src";
+The npm package name is `csvx-lang`.
+The installed CLI command remains `csvx`.
 
-const compiler = new SheetCompiler();
-const result = compiler.compilePath("./examples/retail.sheet");
+---
 
-console.log(result.evaluatedDocument.tables.sales.rows[0]);
-console.log(result.plotSpecs[0]);
-```
+## At a Glance
 
-To export `.xlsx`, use one of the bundled examples:
+- CSV-compatible table input
+- typed columns
+- `@compute` for row-scoped derived columns
+- `@func` for reusable inline logic
+- `@plugin` for trusted local TypeScript helpers
+- `@window` for sequence-scoped columns
+- `@plot` for declarative chart specs
+- CLI for lint, compile, and `.xlsx` export
+- VS Code extension with highlighting, diagnostics, hover, definition, references, and completion
+
+---
+
+## Documentation
+
+All project documentation now lives under [docs](/Users/qianshuang/Project/WebProject/csv-enhance/docs).
+
+### Beginner-friendly guides
+
+- [WIKI.en.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/WIKI.en.md)
+- [WIKI.zh-CN.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/WIKI.zh-CN.md)
+- [AGENT.md](/Users/qianshuang/Project/WebProject/csv-enhance/AGENT.md)
+
+### Reference docs
+
+- [REFERENCE.en.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/REFERENCE.en.md)
+- [REFERENCE.zh-CN.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/REFERENCE.zh-CN.md)
+
+### Builtins
+
+- [BUILTINS.en.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/BUILTINS.en.md)
+- [BUILTINS.zh-CN.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/BUILTINS.zh-CN.md)
+
+### CLI
+
+- [CLI.en.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/CLI.en.md)
+- [CLI.zh-CN.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/CLI.zh-CN.md)
+
+### Contributing
+
+- [CONTRIBUTING.en.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/CONTRIBUTING.en.md)
+- [CONTRIBUTING.zh-CN.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/CONTRIBUTING.zh-CN.md)
+
+### Project notes
+
+- [ROADMAP.en.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/ROADMAP.en.md)
+- [ROADMAP.zh-CN.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/ROADMAP.zh-CN.md)
+- [TYPE_SYSTEM.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/TYPE_SYSTEM.md)
+- [CHANGELOG.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/CHANGELOG.md)
+- [RELEASING.en.md](/Users/qianshuang/Project/WebProject/csv-enhance/docs/RELEASING.en.md)
+
+---
+
+## Quick Start
+
+Build the project:
 
 ```bash
 npm run build
-node examples/compile-retail.js
-node examples/compile-chinese-sales.js
 ```
 
-To lint a `.sheet` file from the command line:
+Run tests:
 
 ```bash
-npm run build
-node dist/cli/sheet.js lint ./examples/retail.sheet
+npm test
 ```
 
-After installing the package as a binary, the same command is available as:
+Try the CLI:
 
 ```bash
-sheet lint ./examples/retail.sheet
+node dist/cli/csvx.js lint ./examples/retail.csvx
+node dist/cli/csvx.js compile ./examples/retail.csvx
+node dist/cli/csvx.js xlsx ./examples/retail.csvx
 ```
 
-## Editor Support
+---
 
-A first VS Code syntax-highlighting extension is available in:
+## Current Status
 
-- [editors/vscode-sheet/package.json](/Users/qianshuang/Project/WebProject/csv-enhance/editors/vscode-sheet/package.json)
-- [editors/vscode-sheet/syntaxes/sheet.tmLanguage.json](/Users/qianshuang/Project/WebProject/csv-enhance/editors/vscode-sheet/syntaxes/sheet.tmLanguage.json)
-- [editors/vscode-sheet/language-configuration.json](/Users/qianshuang/Project/WebProject/csv-enhance/editors/vscode-sheet/language-configuration.json)
+CSVX currently supports:
 
-This first iteration provides:
+- typed tables
+- `@compute`
+- `@func`
+- `@plugin`
+- `@window`
+- `@plot`
+- `.xlsx` export
+- CLI workflows
+- first-pass editor tooling
 
-- `.sheet` file association
-- `#` comment support
-- syntax highlighting for directives, block keys, `name[type]`, `@func` signatures, and expressions
-
-The next editor step is wiring the existing lint and diagnostics engine into inline warnings and errors.
-
-These scripts compile:
-
-- [examples/retail.sheet](/Users/qianshuang/Project/WebProject/csv-enhance/examples/retail.sheet) -> `examples/retail.xlsx`
-- [examples/chinese-sales.sheet](/Users/qianshuang/Project/WebProject/csv-enhance/examples/chinese-sales.sheet) -> `examples/chinese-sales.xlsx`
-
-Each table becomes one worksheet, and plots are stored in a `_plots` worksheet as structured metadata plus Vega-Lite JSON.
-
-The bundled [examples/retail.sheet](/Users/qianshuang/Project/WebProject/csv-enhance/examples/retail.sheet) is a valid end-to-end input for the current DSL.
-The bundled [examples/chinese-sales.sheet](/Users/qianshuang/Project/WebProject/csv-enhance/examples/chinese-sales.sheet) demonstrates Unicode table names, column names, compute targets, and plot dependencies.
-
-`@func` defines a reusable pure expression in the same `.sheet` file:
-
-```text
-@func 税额(单价[number], 数量[number]) -> number
-单价 * 数量 * 1.08
-```
-
-It can then be called from `@compute` just like a normal function call.
-`@compute` is row-scoped only, so built-in cross-row aggregators such as `avg` or `max` are intentionally not supported.
-Current builtin expression functions are `if`, `coalesce`, `and`, and `or`.
-
-Comment lines starting with `#` are ignored during parsing.
-If the first block does not start with `@`, it is parsed as an implicit `@table sheet` block for CSV compatibility.
-Table columns support `name[type]`, for example `region[string]` or `qty[number]`.
-Identifiers are Unicode-aware, so table names and column names such as `销售表` or `金额[number]` are valid.
-If the type is omitted, the column starts as `dynamic` and each cell is parsed in `null -> number -> boolean -> string` order.
-The current demo only models bar plots, and plot fields may only reference `number` columns.
-`@compute` expressions are preserved in the file interface layer, parsed into AST plus semantic bindings in the analysis layer, and then materialized during runtime execution.
+VS Code support is currently the most complete editor experience.

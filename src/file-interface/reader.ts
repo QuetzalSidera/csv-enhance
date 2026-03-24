@@ -69,6 +69,9 @@ export class DefaultSheetFileReader implements SheetFileReader {
     return {
       kind: "plugin",
       alias: block.alias,
+      aliasRange: block.aliasRange,
+      pathRange: block.pathRange,
+      exportNameRanges: block.exportNameRanges,
       source: block.source,
       modulePath: resolvedModulePath,
       exportNames: [...block.binding.exportNames],

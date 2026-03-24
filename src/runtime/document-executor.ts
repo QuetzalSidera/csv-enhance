@@ -2,10 +2,14 @@ import type { AnalyzedPlotBlock, AnalyzedSheetDocument } from "../analysis/types
 import { ThrowHelper } from "../diagnostics";
 import type { DataCellValueType } from "../shared/value";
 import { ComputeExecutor } from "./compute-executor";
+import { WindowExecutor } from "./window-executor";
 import type { EvaluatedPlot, EvaluatedSheetDocument, EvaluatedTable, RuntimeRow } from "./types";
 
 export class DocumentExecutor {
-  constructor(private readonly computeExecutor: ComputeExecutor = new ComputeExecutor()) {}
+  constructor(
+    private readonly computeExecutor: ComputeExecutor = new ComputeExecutor(),
+    private readonly windowExecutor: WindowExecutor = new WindowExecutor(),
+  ) {}
 
   execute(document: AnalyzedSheetDocument): EvaluatedSheetDocument {
     const tables: Record<string, EvaluatedTable> = {};
@@ -30,6 +34,23 @@ export class DocumentExecutor {
         tables[block.tableName] = nextTable;
         blocks.push({
           kind: "compute",
+          tableName: block.tableName,
+          table: nextTable,
+          source: block.source,
+        });
+        continue;
+      }
+
+      if (block.kind === "window") {
+        const currentTable = tables[block.tableName];
+        if (!currentTable) {
+          ThrowHelper.runtime("compute_before_table", { table: block.tableName });
+        }
+
+        const nextTable = this.windowExecutor.execute(this.toTableBlock(currentTable), block);
+        tables[block.tableName] = nextTable;
+        blocks.push({
+          kind: "window",
           tableName: block.tableName,
           table: nextTable,
           source: block.source,

@@ -14,6 +14,7 @@ export const PARSER_ERROR_MESSAGES: Record<ParserDiagnosticKey, MessageFormatter
   table_row_width_mismatch: ({ table, actual, expected }) =>
     `@table ${table} row width mismatch: expected ${expected} cells but received ${actual}`,
   compute_target_required: ({ table }) => `@compute ${table} must declare target:`,
+  window_target_required: ({ table }) => `@window ${table} must declare target:`,
   plot_deps_required: ({ table }) => `@plot ${table} must declare deps:`,
   invalid_identifier: ({ identifier, context }) => `Invalid identifier "${identifier}" in ${context}`,
   duplicate_identifier: ({ identifier, context }) => `Duplicate identifier "${identifier}" in ${context}`,
@@ -29,7 +30,9 @@ export const PARSER_ERROR_MESSAGES: Record<ParserDiagnosticKey, MessageFormatter
   unsupported_plot_type: ({ value }) => `Only bar plots are supported in this demo: ${value}`,
   unsupported_plot_key: ({ key }) => `Unsupported plot key "${key}"`,
   invalid_func_signature: ({ signature }) => `Invalid @func signature: ${signature}`,
-  func_body_expression_count: ({ name }) => `@func ${name} must define exactly one expression body`,
+  func_body_expression_count: ({ name }) => `@func ${name} must define at least one statement`,
+  func_return_required: ({ name }) => `@func ${name} must define at least one return statement`,
+  invalid_func_statement: ({ statement }) => `Invalid @func statement "${statement}"`,
   invalid_compute_statement: ({ lineText }) => `Invalid @compute statement "${lineText}"`,
   invalid_compute_target: ({ target }) => `Invalid computed column name "${target}"`,
   unterminated_csv_quote: ({ lineText }) => `Unterminated quoted value in CSV line: ${lineText}`,

@@ -28,6 +28,7 @@ export interface ResolvedPluginBinding {
 
 export interface ComputeStatement {
   target: string;
+  targetColumn: TableColumn;
   targetRange: DiagnosticRange;
   expression: string;
   expressionRange: DiagnosticRange;
@@ -37,7 +38,42 @@ export interface ComputeStatement {
 export interface FunctionParameter {
   name: string;
   type: ColumnType;
+  shape: ValueShape;
+  nameRange?: DiagnosticRange;
 }
+
+export type ValueShape = "scalar" | "row" | "col";
+
+export interface FunctionValueBinding {
+  name: string;
+  type: ColumnType;
+  shape: ValueShape;
+  nameRange?: DiagnosticRange;
+}
+
+export interface FuncReturnSpec {
+  type: ColumnType;
+  shape: ValueShape;
+  range?: DiagnosticRange;
+}
+
+export interface FuncAssignmentStatement {
+  kind: "assign";
+  target: FunctionValueBinding;
+  targetRange: DiagnosticRange;
+  expression: string;
+  expressionRange: DiagnosticRange;
+  source: SourceRange;
+}
+
+export interface FuncReturnStatement {
+  kind: "return";
+  expression: string;
+  expressionRange: DiagnosticRange;
+  source: SourceRange;
+}
+
+export type FuncStatement = FuncAssignmentStatement | FuncReturnStatement;
 
 export interface ComputeBlockTargets {
   columns: TableColumn[];
@@ -60,13 +96,14 @@ export interface PlotDependencies {
 
 export interface TableColumn {
   name: string;
+  nameRange?: DiagnosticRange;
   declaredType: ColumnType;
   columnType: ColumnType;
   isTypeExplicit: boolean;
 }
 
 export interface BaseBlock {
-  kind: "meta" | "plugin" | "table" | "func" | "compute" | "plot";
+  kind: "meta" | "plugin" | "table" | "func" | "compute" | "window" | "plot";
   source: SourceRange;
 }
 
@@ -78,12 +115,18 @@ export interface MetaBlock extends BaseBlock {
 export interface ParsedPluginBlock extends BaseBlock {
   kind: "plugin";
   alias: string;
+  aliasRange?: DiagnosticRange;
+  pathRange?: DiagnosticRange;
+  exportNameRanges?: Record<string, DiagnosticRange>;
   binding: ParsedPluginBinding;
 }
 
 export interface ResolvedPluginBlock extends BaseBlock {
   kind: "plugin";
   alias: string;
+  aliasRange?: DiagnosticRange;
+  pathRange?: DiagnosticRange;
+  exportNameRanges?: Record<string, DiagnosticRange>;
   modulePath: string;
   exportNames: string[];
   binding: ResolvedPluginBinding;
@@ -92,6 +135,7 @@ export interface ResolvedPluginBlock extends BaseBlock {
 export interface TableBlock extends BaseBlock {
   kind: "table";
   name: string;
+  nameRange?: DiagnosticRange;
   columns: TableColumn[];
   rows: DataCellValueType[][];
 }
@@ -99,15 +143,28 @@ export interface TableBlock extends BaseBlock {
 export interface FuncBlock extends BaseBlock {
   kind: "func";
   name: string;
+  nameRange?: DiagnosticRange;
   params: FunctionParameter[];
-  returnType: ColumnType;
-  expression: string;
-  expressionRange: DiagnosticRange;
+  returnSpec: FuncReturnSpec;
+  statements: FuncStatement[];
 }
 
 export interface ComputeBlock extends BaseBlock {
   kind: "compute";
   tableName: string;
+  tableNameRange?: DiagnosticRange;
+  targets: ComputeBlockTargets;
+  statements: ComputeStatement[];
+}
+
+export interface WindowBlock extends BaseBlock {
+  kind: "window";
+  tableName: string;
+  tableNameRange?: DiagnosticRange;
+  orderBy?: string;
+  orderByRange?: DiagnosticRange;
+  groupBy?: string[];
+  groupByRanges?: Record<string, DiagnosticRange>;
   targets: ComputeBlockTargets;
   statements: ComputeStatement[];
 }
@@ -115,13 +172,14 @@ export interface ComputeBlock extends BaseBlock {
 export interface PlotBlock extends BaseBlock {
   kind: "plot";
   tableName: string;
+  tableNameRange?: DiagnosticRange;
   dependencies: PlotDependencies;
   fields: PlotFieldMap;
   fieldRanges?: Partial<Record<keyof PlotFieldMap, DiagnosticRange>>;
 }
 
-export type ParsedSheetBlock = MetaBlock | ParsedPluginBlock | TableBlock | FuncBlock | ComputeBlock | PlotBlock;
-export type ResolvedSheetBlock = MetaBlock | ResolvedPluginBlock | TableBlock | FuncBlock | ComputeBlock | PlotBlock;
+export type ParsedSheetBlock = MetaBlock | ParsedPluginBlock | TableBlock | FuncBlock | ComputeBlock | WindowBlock | PlotBlock;
+export type ResolvedSheetBlock = MetaBlock | ResolvedPluginBlock | TableBlock | FuncBlock | ComputeBlock | WindowBlock | PlotBlock;
 
 export interface ParsedSheetDocument {
   blocks: ParsedSheetBlock[];
